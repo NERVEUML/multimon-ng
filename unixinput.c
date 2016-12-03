@@ -483,6 +483,9 @@ static void input_file(unsigned int sample_rate, unsigned int overlap,
     /*
      * demodulate
      */
+    int acc = 0;
+    int secacc = 0;
+    float time =0;
     for (;;) {
         i = read(fd, sp = buffer, sizeof(buffer));
         if (i < 0 && errno != EAGAIN) {
@@ -493,9 +496,9 @@ static void input_file(unsigned int sample_rate, unsigned int overlap,
             break;
         if (i > 0) {
             if(integer_only)
-        {
+            {
                 fbuf_cnt = i/sizeof(buffer[0]);
-        }
+            }
             else
             {
                 for (; (unsigned int) i >= sizeof(buffer[0]); i -= sizeof(buffer[0]), sp++)
@@ -504,6 +507,16 @@ static void input_file(unsigned int sample_rate, unsigned int overlap,
                     fprintf(stderr, "warning: noninteger number of samples read\n");
             }
             if (fbuf_cnt > overlap) {
+                acc += fbuf_cnt;
+                //timestamp in the file
+                time= (float)secacc + ((float)acc)/22050;
+                verbprintf(0,"Time: %.02f,fbuf_cnt: %d, acc=%d, secacc=%d\n",time,fbuf_cnt,acc,secacc);
+
+                if(acc > 22050 ){
+                    secacc += acc/22050;
+                    acc = acc%22050;
+                }
+
                 process_buffer(fbuf, buffer, fbuf_cnt-overlap);
                 memmove(fbuf, fbuf+fbuf_cnt-overlap, overlap*sizeof(fbuf[0]));
                 fbuf_cnt = overlap;
